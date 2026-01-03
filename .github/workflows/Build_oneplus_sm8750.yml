@@ -185,9 +185,9 @@ jobs:
             unzip -q common.zip && 
             mv "android_kernel_oneplus_mt6991-oneplus-${REPO_MANIFEST}" common
           else
-            aria2c -s16 -x16 -k1M https://github.com/OnePlusOSS/android_kernel_common_oneplus_sm8750/archive/refs/heads/oneplus/${REPO_MANIFEST}.zip -o common.zip
-            unzip -q common.zip && 
-            mv "android_kernel_common_oneplus_sm8750-oneplus-${REPO_MANIFEST}" common
+            aria2c -s16 -x16 -k1M https://github.com/OnePlusOSS/android_kernel_common_oneplus_sm8650/archive/refs/heads/oneplus/sm8650_b_16.0.0_ace_5.zip -o common.zip
+              unzip -q common.zip && 
+              mv "android_kernel_common_oneplus_sm8650-oneplus-sm8650_b_16.0.0_ace_5" common
           fi
           rm -rf common.zip 
           echo "正在克隆llvm-clang18工具链..."
@@ -254,17 +254,6 @@ jobs:
             ccache -sv
           fi
          
-      - name: 🔧 apply lz4 1.10.0 & zstd 1.5.7 patches (添加lz4 1.10.0 & zstd 1.5.7补丁)
-        run: |
-          echo "正在添加lz4 1.10.0 & zstd 1.5.7补丁…"
-          cd kernel_workspace
-          git clone https://github.com/cctv18/oppo_oplus_realme_sm8750.git
-          cp ./oppo_oplus_realme_sm8750/zram_patch/001-lz4.patch ./common
-          cp ./oppo_oplus_realme_sm8750/zram_patch/lz4armv8.S ./common/lib
-          cp ./oppo_oplus_realme_sm8750/zram_patch/002-zstd.patch ./common/
-          cd ./common
-          git apply -p1 < 001-lz4.patch || true
-          patch -p1 < 002-zstd.patch || true
           
       - name: 🔧 Set Baseband-guard (开启BBG基带守护)
         if: ${{ env.ENABLE_BBG == 'true' }}
@@ -431,38 +420,6 @@ jobs:
           sudo sed -i "s/-4k/$ESCAPED_SUFFIX/g" ./common/arch/arm64/configs/gki_defconfig
           sed -i 's/${scm_version}//' ./common/scripts/setlocalversion
           
-      - name: 🔧 Apply Sched Patch (应用完美风驰补丁)
-        run: |
-          if [ "${{ env.ENABLE_SCX }}" = "true" ]; then
-            if [ "$SCHED_FILE" = "none" ]; then
-              echo "该机型自带风驰，跳过应用补丁"
-            else
-              cd kernel_workspace/common
-              if [ "${DEVICES_NAME}" = "oneplus_ace5_ultra" ] || [ "${DEVICES_NAME}" = "realme_GT7" ]; then
-                git clone https://github.com/Numbersf/SCHED_PATCH.git -b "mt6991"
-              else
-                git clone https://github.com/Numbersf/SCHED_PATCH.git -b "sm8750"
-              fi
-              echo "正在拉取风驰补丁"
-              cp ./SCHED_PATCH/fengchi_${{env.SCHED_FILE}}.patch ./
-              if [[ -f "fengchi_${{env.SCHED_FILE}}.patch" ]]; then
-                echo "开始应用风驰补丁"
-                dos2unix "fengchi_${{env.SCHED_FILE}}.patch"
-                patch -p1 -F 3 < "fengchi_${{env.SCHED_FILE}}.patch"
-                echo "完美风驰补丁应用完成"
-              else
-                echo "❌ 未匹配到补丁，风驰补丁暂未支持该机型"
-                exit 11
-              fi
-            fi
-          else
-            echo "未启用风驰，则需应用OGKI转换GKI补丁"
-              sed -i '1iobj-y += hmbird_patch.o' drivers/Makefile
-               cp "${GITHUB_WORKSPACE}/.github/workflows/Bin/hmbird_patch.patch" ./hmbird_patch.patch
-              echo "正在打OGKI转换GKI补丁"
-              patch -p1 -F 3 < hmbird_patch.patch
-              echo "OGKI转换GKI_patch完成"
-          fi
 
       - name: 🔨 Build Kernel (构建内核)
         run: |
